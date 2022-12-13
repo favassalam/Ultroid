@@ -37,9 +37,7 @@ buddhhu = {}
 async def _(e):
     if e.reply_to_msg_id:
         okk = await e.get_reply_message()
-        if okk.sender.username:
-            put = f"@{okk.sender.username}"
-        put = okk.sender_id
+        put = f"@{okk.sender.username}" if okk.sender.username else okk.sender_id
     else:
         put = e.pattern_match.group(1).strip()
     if put:
@@ -65,6 +63,8 @@ async def _(e):
         if query.isdigit():
             query = int(query)
         logi = await ultroid_bot.get_entity(query)
+        if not isinstance(logi, types.User):
+            raise ValueError("Invalid Username.")
     except IndexError:
         sur = e.builder.article(
             title="Give Username",
@@ -72,7 +72,8 @@ async def _(e):
             text="You Didn't Type Username or id.",
         )
         return await e.answer([sur])
-    except ValueError:
+    except ValueError as er:
+        LOGS.exception(er)
         sur = e.builder.article(
             title="User Not Found",
             description="Make sure username or id is correct.",
@@ -141,11 +142,9 @@ async def _(e):
                 same_peer=True,
             ),
         ]
-        sur = e.builder.document(
+        sur = e.builder.article(
             title=user.first_name,
             description=desc,
-            file=logi.full_user.profile_photo,
-            include_media=False,
             text=text,
             buttons=button,
         )

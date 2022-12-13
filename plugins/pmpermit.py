@@ -200,8 +200,11 @@ if udB.get_key("PMSETTING"):
             incoming=True,
             func=lambda e: e.is_private
             and e.sender_id not in DEVLIST
-            and not (e.out or e.sender.bot or e.sender.is_self or e.sender.verified),
-        ),
+            and not e.out
+            and not e.sender.bot
+            and not e.sender.is_self
+            and not e.sender.verified,
+        )
     )
     async def permitpm(event):
         inline_pm = Redis("INLINE_PM") or False
@@ -212,7 +215,7 @@ if udB.get_key("PMSETTING"):
                     await ultroid_bot.edit_folder(user.id, folder=1)
                 except BaseException as er:
                     LOGS.info(er)
-            if event.media:
+            if event.media and not udB.get_key("DISABLE_PMDEL"):
                 await event.delete()
             name = user.first_name
             fullname = get_display_name(user)
@@ -375,9 +378,7 @@ if udB.get_key("PMSETTING"):
                     f"**{mention}** [`{user.id}`] was Blocked for spamming.",
                 )
 
-    @ultroid_cmd(
-        pattern="(start|stop|clear)archive$",
-    )
+    @ultroid_cmd(pattern="(start|stop|clear)archive$", fullsudo=True)
     async def _(e):
         x = e.pattern_match.group(1).strip()
         if x == "start":
@@ -393,9 +394,7 @@ if udB.get_key("PMSETTING"):
             except Exception as mm:
                 await e.eor(str(mm), time=5)
 
-    @ultroid_cmd(
-        pattern="(a|approve)(?: |$)",
-    )
+    @ultroid_cmd(pattern="(a|approve)(?: |$)", fullsudo=True)
     async def approvepm(apprvpm):
         if apprvpm.reply_to_msg_id:
             user = (await apprvpm.get_reply_message()).sender
@@ -446,9 +445,7 @@ if udB.get_key("PMSETTING"):
         else:
             await apprvpm.eor("`User may already be approved.`", time=5)
 
-    @ultroid_cmd(
-        pattern="(da|disapprove)(?: |$)",
-    )
+    @ultroid_cmd(pattern="(da|disapprove)(?: |$)", fullsudo=True)
     async def disapprovepm(e):
         if e.reply_to_msg_id:
             user = (await e.get_reply_message()).sender
@@ -513,14 +510,10 @@ async def blockpm(block):
         user = block.chat_id
     else:
         return await eor(block, NO_REPLY, time=10)
-    if user in DEVLIST:
-        return await eor(
-            block,
-            "`Lol, He is my Developer\nHe Can't Be Blocked`",
-        )
+
     await block.client(BlockRequest(user))
     aname = await block.client.get_entity(user)
-    await block.eor(f"{inline_mention(aname)} `has been blocked!`")
+    await block.eor(f"{inline_mention(aname)} [`{user}`] `has been blocked!`")
     try:
         disapprove_user(user)
     except AttributeError:
@@ -546,11 +539,12 @@ async def blockpm(block):
         pass
 
 
-@ultroid_cmd(pattern="unblock( (.*)|$)")
+@ultroid_cmd(pattern="unblock( (.*)|$)", fullsudo=True)
 async def unblockpm(event):
     match = event.pattern_match.group(1).strip()
-    if event.reply_to_msg_id:
-        user = (await event.get_reply_message()).sender_id
+    reply = await event.get_reply_message()
+    if reply:
+        user = reply.sender_id
     elif match:
         if match == "all":
             msg = await event.eor(get_string("com_1"))
@@ -576,14 +570,10 @@ async def unblockpm(event):
             user = await event.client.parse_id(match)
         except Exception as er:
             return await event.eor(str(er))
-    elif block.is_private:
-        user = (await event.get_chat()).id
+    elif event.is_private:
+        user = event.chat_id
     else:
         return await event.eor(NO_REPLY, time=10)
-    try:
-        user = await event.client.parse_id(match)
-    except Exception as er:
-        return await event.eor(str(er))
     try:
         await event.client(UnblockRequest(user))
         aname = await event.client.get_entity(user)
@@ -630,14 +620,13 @@ async def list_approved(event):
                 tabulate(users, headers=["UserName", "UserID"], showindex="always")
             )
         else:
-            text = ""
-            for user in users:
-                text += f"[{user[-1]}] - {user[0]}"
+            text = "".join(f"[{user[-1]}] - {user[0]}" for user in users)
             list_appr.write(text)
     await event.reply(
-        "List of users approved by [{}](tg://user?id={})".format(OWNER_NAME, OWNER_ID),
+        f"List of users approved by [{OWNER_NAME}](tg://user?id={OWNER_ID})",
         file="approved_pms.txt",
     )
+
     await xx.delete()
     remove("approved_pms.txt")
 
@@ -822,7 +811,7 @@ async def in_pm_ans(event):
                 await event.builder.document(
                     res,
                     title="Inline PmPermit",
-                    description="~ @TheUltroid",
+                    description="~ @TeamUltroid",
                     text=msg_,
                     buttons=buttons,
                     link_preview=False,

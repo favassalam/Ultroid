@@ -5,27 +5,26 @@
 # PLease read the GNU Affero General Public License in
 # <https://www.github.com/TeamUltroid/Ultroid/blob/main/LICENSE/>.
 
-
 import asyncio
 import os
 import time
 from random import choice
 
 import requests
+from telethon import Button, events
+from telethon.tl import functions, types  # pylint:ignore
+
 from pyUltroid import *
 from pyUltroid._misc._assistant import asst_cmd, callback, in_pattern
 from pyUltroid._misc._decorators import ultroid_cmd
 from pyUltroid._misc._wrappers import eod, eor
 from pyUltroid.dB import DEVLIST, ULTROID_IMAGES
-from pyUltroid.functions.helper import *
-from pyUltroid.functions.info import *
-from pyUltroid.functions.misc import *
-from pyUltroid.functions.tools import *
+from pyUltroid.fns.helper import *
+from pyUltroid.fns.info import *
+from pyUltroid.fns.misc import *
+from pyUltroid.fns.tools import *
 from pyUltroid.version import __version__, ultroid_version
-from telethon import Button, events
-from telethon.tl import functions, types
-
-from strings import get_string
+from strings import get_help, get_string
 
 Redis = udB.get_key
 con = TgConverter
@@ -35,19 +34,23 @@ OWNER_ID = ultroid_bot.uid
 
 LOG_CHANNEL = udB.get_key("LOG_CHANNEL")
 
-INLINE_PIC = udB.get_key("INLINE_PIC")
 
-if INLINE_PIC is None:
-    INLINE_PIC = choice(ULTROID_IMAGES)
-elif INLINE_PIC == False:
-    INLINE_PIC = None
+def inline_pic():
+    INLINE_PIC = udB.get_key("INLINE_PIC")
+    if INLINE_PIC is None:
+        INLINE_PIC = choice(ULTROID_IMAGES)
+    elif INLINE_PIC == False:
+        INLINE_PIC = None
+    return INLINE_PIC
+
 
 Telegraph = telegraph_client()
 
 List = []
 Dict = {}
+InlinePlugin = {}
 N = 0
-
+cmd = ultroid_cmd
 STUFF = {}
 
 # Chats, which needs to be ignore for some cases
@@ -55,7 +58,7 @@ STUFF = {}
 # Feel Free to Add Any other...
 
 NOSPAM_CHAT = [
-    -1001327032795,  # UltroidSupport
+    -1001361294038,  # UltroidSupportChat
     -1001387666944,  # PyrogramChat
     -1001109500936,  # TelethonChat
     -1001050982793,  # Python
