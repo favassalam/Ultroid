@@ -1,5 +1,5 @@
 # Ultroid - UserBot
-# Copyright (C) 2021-2022 TeamUltroid
+# Copyright (C) 2021-2023 TeamUltroid
 #
 # This file is a part of < https://github.com/TeamUltroid/Ultroid/ >
 # PLease read the GNU Affero General Public License in
@@ -19,6 +19,10 @@ import random
 
 from telethon.tl.types import InputMessagesFilterPhotos
 
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 from pyUltroid.fns.misc import unsplashsearch
 from pyUltroid.fns.tools import LogoHelper
 
@@ -44,18 +48,28 @@ async def logo_gen(event):
             elif "pic" in mediainfo(temp.media):
                 bg_ = await temp.download_media()
     if not bg_:
-        if event.client._bot:
-            SRCH = ["blur background", "background", "neon lights", "wallpaper"]
-            res = await unsplashsearch(random.choice(SRCH), limit=1)
-            bg_ = await download_file(res[0], "resources/downloads/logo.png")
-        else:
-            pics = []
-            async for i in event.client.iter_messages(
-                "@UltroidLogos", filter=InputMessagesFilterPhotos
-            ):
-                pics.append(i)
-            id_ = random.choice(pics)
-            bg_ = await id_.download_media()
+        SRCH = [
+                "background",
+                "neon",
+                "anime",
+                "art",
+                "bridges",
+                "streets",
+                "computer",
+                "cyberpunk",
+                "nature",
+                "abstract",
+                "exoplanet",
+                "magic",
+                "3d render",
+            ]
+        res = await unsplashsearch(random.choice(SRCH), limit=1)
+        bg_, _ = await download_file(res[0], "resources/downloads/logo.png")
+        newimg = "resources/downloads/unsplash-temp.jpg"
+        img_ = Image.open(bg_)
+        img_.save(newimg)
+        os.remove(bg_)
+        bg_ = newimg
 
     if not font_:
         fpath_ = glob.glob("resources/fonts/*")
